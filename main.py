@@ -432,6 +432,16 @@ def __validate_body_params(
     if data['second_term_source_config']['limit'] == 0:
       data['second_term_source_config']['limit'] = 9999
 
+  # Validate relationship_type_filter if provided
+  if 'relationship_type_filter' in data:
+    if data['relationship_type_filter'] not in ['direct', 'all']:
+      raise ValueError('Invalid relationship_type_filter body param. Supported values are direct or all.')
+
+  # Set default when a second term source is used and filter not specified
+  if second_term_source != SecondTermSource.NONE:
+    if 'relationship_type_filter' not in data:
+      data['relationship_type_filter'] = 'all'
+
   if (
       destination == Destination.SA360_FEED or
       destination == Destination.DV360_FEED

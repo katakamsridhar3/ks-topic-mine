@@ -609,6 +609,14 @@ class ContentGeneratorService:
       entry.relationship = (
           response['relationship'] or response['relationship'] == 'true'
           )
+      # Enforce direct relationship filter if requested
+      try:
+        if self.body_params.get('relationship_type_filter') == 'direct':
+          reason_text = entry.association_reason if isinstance(entry.association_reason, str) else ''
+          if 'indirect' in reason_text.lower():
+            entry.relationship = False
+      except Exception as _:
+        pass
       logging.info(
           ' Relationship: %s - %s',
           entry.relationship,
