@@ -163,6 +163,24 @@ class ContentGeneratorService:
 
     return terms, descriptions, skus, urls, image_urls
 
+  def __get_first_term_info_from_appscript(
+      self
+      ) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
+    """Gets the terms, descriptions, skus, urls and image_urls from appscript.
+
+    Returns:
+      tuple(list(str), list(str), list(str), list(str), list(str)):
+      A tuple with a list of terms, descriptions, skus, urls and image_urls.
+    """
+    logging.info(' Getting terms and descriptions from appscript payload')
+    source_config = self.body_params['first_term_source_config']
+    terms = source_config['terms']
+    descriptions = source_config.get('descriptions', [])
+    skus = source_config.get('skus', [])
+    urls = source_config.get('urls', [])
+    image_urls = source_config.get('image_urls', [])
+    return terms, descriptions, skus, urls, image_urls
+
   def __get_first_term_info_from_bq(
       self
       ) -> tuple[list[str], list[str], list[str], list[str], list[str]]:
@@ -272,10 +290,12 @@ class ContentGeneratorService:
       return self.__get_first_term_info_from_spreadsheet()
     elif self.first_term_source == FirstTermSource.BIG_QUERY:
       return self.__get_first_term_info_from_bq()
+    elif self.first_term_source == FirstTermSource.APP_SCRIPT:
+      return self.__get_first_term_info_from_appscript()
     else:
       raise ValueError(
           ('Invalid first-term-source query param. '
-           'Supported values are spreadsheet and big_query.')
+           'Supported values are spreadsheet, big_query, and appscript.')
           )
 
   def __get_associative_terms_and_descriptions_from_gt(
@@ -438,6 +458,21 @@ class ContentGeneratorService:
                                                                 )
     return associative_terms, descriptions
 
+  def __get_associative_terms_and_descriptions_from_appscript(
+      self
+      ) -> tuple[list[str], list[str]]:
+    """Gets the associative terms and descriptions from appscript payload.
+
+    Returns:
+      tuple(list(str), list(str)): A tuple with a list of associative
+      terms and a list of descriptions.
+    """
+    logging.info(' Getting associative terms and descriptions from appscript payload')
+    source_config = self.body_params['second_term_source_config']
+    terms = source_config['terms']
+    descriptions = source_config.get('descriptions', [])
+    return terms, descriptions
+
   def __get_associative_terms_and_descriptions(
       self
       ) -> tuple[list[str], list[str]]:
@@ -457,10 +492,12 @@ class ContentGeneratorService:
       return self.__get_associative_terms_and_descriptions_from_rss()
     elif self.second_term_source == SecondTermSource.SPREADSHEET:
       return self.__get_associative_terms_and_descriptions_from_spreadsheet()
+    elif self.second_term_source == SecondTermSource.APP_SCRIPT:
+      return self.__get_associative_terms_and_descriptions_from_appscript()
     else:
       raise ValueError(
           ('Invalid second-term-source query param. Supported values are '
-           'none, google_trends, search_scout, rss_feed and spreadsheet.')
+           'none, google_trends, search_scout, rss_feed, spreadsheet, and appscript.')
           )
 
   def __remove_double_quotes(self, terms: list[str]) -> list[str]:

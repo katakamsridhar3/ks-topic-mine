@@ -147,9 +147,12 @@ def __generate_and_export_content(
         body_params
         )
 
-    __export_entries(entries, destination, body_params)
+    export_result = __export_entries(entries, destination, body_params)
 
-    tasks[tid] = {'status': 'completed', 'result': 'ok'}
+    if export_result is None:
+      tasks[tid] = {'status': 'completed', 'result': 'ok'}
+    else:
+      tasks[tid] = {'status': 'completed', 'result': export_result}
   except Exception as e:
     logging.error(' %s', str(e))
     tasks[tid] = {'status': 'failed 500', 'result': str(e)}
@@ -176,6 +179,8 @@ def __get_destination(r) -> Destination:
       return Destination.SA360_FEED
     case 'acsfeed':
       return Destination.ACS_FEED
+    case 'appscript':
+      return Destination.APP_SCRIPT
     case 'dv360':
       raise ValueError('Destination dv360 not yet supported')
       # return Destination.DV360_API
@@ -185,7 +190,7 @@ def __get_destination(r) -> Destination:
     case _:
       raise ValueError(
           'Invalid destination query param.' +
-          'Supported values are dv360feed, sa360feed, dv360, sa360.'
+          'Supported values are dv360feed, sa360feed, acsfeed, appscript, dv360, sa360.'
           )
 
 
@@ -205,17 +210,20 @@ def __get_first_term_source(r) -> FirstTermSource:
 
   if not first_term_source or first_term_source not in [
       'spreadsheet',
-      'big_query'
+      'big_query',
+      'appscript'
       ]:
     raise ValueError(
         'Invalid first-term-source query param.'+
-        'Supported values are spreadsheet and big_query.'
+        'Supported values are spreadsheet, big_query, and appscript.'
         )
 
   if first_term_source == 'spreadsheet':
     first_term_source = FirstTermSource.SPREADSHEET
   elif first_term_source == 'big_query':
     first_term_source = FirstTermSource.BIG_QUERY
+  elif first_term_source == 'appscript':
+    first_term_source = FirstTermSource.APP_SCRIPT
 
   return first_term_source
 
@@ -238,11 +246,12 @@ def __get_second_term_source(r) -> SecondTermSource:
       'google_trends',
       'search_scout',
       'rss_feed',
-      'spreadsheet'
+      'spreadsheet',
+      'appscript'
       ]:
     raise ValueError(
         'Invalid second-term-source query param. Supported values are '+
-        'none (no param), google_trends, search_scout, rss_feed.'
+        'none (no param), google_trends, search_scout, rss_feed, spreadsheet, appscript.'
         )
 
   if second_term_source == 'google_trends':
@@ -253,6 +262,8 @@ def __get_second_term_source(r) -> SecondTermSource:
     second_term_source = SecondTermSource.RSS_FEED
   elif second_term_source == 'spreadsheet':
     second_term_source = SecondTermSource.SPREADSHEET
+  elif second_term_source == 'appscript':
+    second_term_source = SecondTermSource.APP_SCRIPT
   elif second_term_source is None:
     second_term_source = SecondTermSource.NONE
 
@@ -371,6 +382,23 @@ def __validate_body_params(
         raise ValueError('Missing or invalid limit in first_term_source_config. Must be of type int.')
       if data['first_term_source_config']['limit'] == 0:
         data['first_term_source_config']['limit'] = 9999
+  elif first_term_source == FirstTermSource.APP_SCRIPT:
+    if 'terms' not in data['first_term_source_config']:
+      raise ValueError('Missing terms in first_term_source_config.')
+    if not isinstance(data['first_term_source_config']['terms'], list):
+      raise ValueError('Invalid terms in first_term_source_config. Must be list.')
+    term_count = len(data['first_term_source_config']['terms'])
+    for optional_key in ['descriptions', 'skus', 'urls', 'image_urls']:
+      if optional_key in data['first_term_source_config']:
+        optional_list = data['first_term_source_config'][optional_key]
+        if not isinstance(optional_list, list):
+          raise ValueError(
+              f'Invalid {optional_key} in first_term_source_config. Must be list.'
+              )
+        if len(optional_list) != term_count:
+          raise ValueError(
+              f'Invalid {optional_key} in first_term_source_config. Must match terms length.'
+              )
 
   if (
       'second_term_source_config' in data and
@@ -431,6 +459,22 @@ def __validate_body_params(
       raise ValueError('Missing or invalid limit in second_term_source_config. Must be of type int.')
     if data['second_term_source_config']['limit'] == 0:
       data['second_term_source_config']['limit'] = 9999
+  elif second_term_source == SecondTermSource.APP_SCRIPT:
+    if 'terms' not in data['second_term_source_config']:
+      raise ValueError('Missing terms in second_term_source_config.')
+    if not isinstance(data['second_term_source_config']['terms'], list):
+      raise ValueError('Invalid terms in second_term_source_config. Must be list.')
+    term_count = len(data['second_term_source_config']['terms'])
+    if 'descriptions' in data['second_term_source_config']:
+      descriptions = data['second_term_source_config']['descriptions']
+      if not isinstance(descriptions, list):
+        raise ValueError(
+            'Invalid descriptions in second_term_source_config. Must be list.'
+            )
+      if len(descriptions) != term_count:
+        raise ValueError(
+            'Invalid descriptions in second_term_source_config. Must match terms length.'
+            )
 
   # Validate relationship_type_filter if provided
   if 'relationship_type_filter' in data:
@@ -482,6 +526,8 @@ def __validate_body_params(
         not isinstance(data['destination_config']['starting_row'], int)
         ):
       raise ValueError('Missing or invalid starting_row in destination_config. Must be of type int.')
+  elif destination == Destination.APP_SCRIPT:
+    pass
 
   return data
 
@@ -539,7 +585,13 @@ def __export_entries(entries: list[Entry], destination: Destination, body_params
   elif destination == Destination.DV360_API:
     pass
     # TODO: export to dv360
+  elif destination == Destination.APP_SCRIPT:
+    return {
+        'entries': [entry.to_dict() for entry in entries]
+        }
   logging.info(' Content exported!')
+
+  return None
 
 
 if __name__ == '__main__':

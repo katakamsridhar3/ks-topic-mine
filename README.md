@@ -49,3 +49,10 @@ Topic Mine leverages 1st and/or 2nd party data to identify trending topics and u
 ## Docs
 
 Technical documentation and detailed instructions on how to configure and deploy can be found [here](https://github.com/google-marketing-solutions/topic-mine/wiki).
+
+## Apps Script quickstart
+
+If you prefer a lightweight, Apps Script-driven flow (no Sheets input/output), use the
+`apps_script/` sample. It sends inline term arrays to the API and returns generated
+content in the task response. See `apps_script/README.md` for setup steps and a ready-to-run
+script you can deploy in minutes.
