@@ -77,6 +77,25 @@ class Entry:
         return self.id == other.id
     return False
 
+  def to_dict(self):
+    """Return a dict representation of the entry for API responses."""
+    return {
+        'id': str(self.id),
+        'sku': self.sku,
+        'url': self.url,
+        'image_url': self.image_url,
+        'term': self.term,
+        'term_description': self.term_description,
+        'associative_term': self.associative_term,
+        'associative_term_description': self.associative_term_description,
+        'association_reason': self.association_reason,
+        'relationship': self.relationship,
+        'headlines': self.headlines,
+        'descriptions': self.descriptions,
+        'keywords': self.keywords,
+        'paths': self.paths,
+        }
+
 
   def must_generate_content(self, must_find_relationship: bool):
     """True if content must be generated for this entry, otherwise false.
